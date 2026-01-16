@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushBut
 from PyQt5.QtGui import QPainter, QPen, QColor
 from PyQt5.QtCore import Qt, QObject, pyqtSignal
 from SCREEN.screen1 import HeatingModel
+from SCREEN.screen2 import InstalacjaScreen
 import sys
 
 # ------------------------- OKNO RUR -------------------------
@@ -89,5 +90,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     model = HeatingModel()
     window = RuryScreen(model)
+    window = InstalacjaScreen(model)
     window.show()
     sys.exit(app.exec())

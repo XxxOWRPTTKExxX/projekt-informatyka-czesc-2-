@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy
 from PyQt5.QtGui import QPainter, QPen
-from PyQt5.QtCore import Qt, QObject, pyqtSignal
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, QTimer
 import sys
 
 
@@ -45,10 +45,10 @@ class HeatingView(QWidget):
         # rurka termometru
         painter.drawLine(tx, ty, tx, ty+270 + 200)
 
-        # zaokrąglenie u góry
+        # zaokraglenie u gory
         painter.drawArc(tx - 15, ty - 10, 30, 30, 0 * 16, 180 * 16)
 
-        # zbiornik na dole
+        # zaokraglenie na dole
         painter.drawArc(tx - 25, ty + 450, 50, 50, 55 * 16, -290 * 16)
         painter.drawLine(tx-15, ty+5 , tx-15, ty + 455)
         painter.drawLine(tx + 15, ty + 5, tx + 15, ty + 455)
@@ -66,6 +66,25 @@ class HeatingView(QWidget):
         filled_height = int((temp - min_temp) / (max_temp - min_temp) * thermo_height)
         painter.drawEllipse(625,510,50,50)
         painter.drawRect(tx - 10,ty + 460 - filled_height,20,filled_height-10)
+
+        popiol_procent = self.model.stan_popiol()
+
+        if popiol_procent > 80:
+            import time
+            if int(time.time()*2)%2 ==0:
+                color = Qt.red
+            else:
+                color = Qt.white
+        else:
+            color = Qt.gray
+
+        #if popiol_procent = 100:
+
+        painter.setBrush(color)
+        painter.setPen(Qt.black)
+        painter.drawRect(280, 490, 80, 50)
+        painter.drawText(280,490,80,50, Qt.AlignCenter, f"{popiol_procent}")
+
 
 
 class PiecScreen(QWidget):
@@ -88,8 +107,13 @@ class PiecScreen(QWidget):
         self.pump_btn = QPushButton("Pompa ON/OFF")
         self.pump_btn.clicked.connect(self.switch_pump)
 
+
+
         self.goto_ekrangl_btn = QPushButton("Przejdź do ekranu glownego")
         self.goto_ekrangl_btn.clicked.connect(self.open_mainscreen)
+
+        self.goto_rury_btn = QPushButton("Przejdź do instalacji")
+        self.goto_rury_btn.clicked.connect(self.open_rury_screen)
 
         layout = QVBoxLayout()
         layout.addWidget(self.view)
@@ -97,14 +121,28 @@ class PiecScreen(QWidget):
         layout.addWidget(slider)
         layout.addWidget(self.pump_btn)
         layout.addWidget(self.goto_ekrangl_btn)
+        layout.addWidget(self.goto_rury_btn)
         self.setLayout(layout)
 
+                # przycisk do popiolu
+        self.popiol_btn = QPushButton("Oproznij popiol", self)
+        self.popiol_btn.setGeometry(130, 505, 150, 50)
+        self.popiol_btn.raise_()
+        self.popiol_btn.clicked.connect(self.reset_popiol)
+
         self.model.temperatureChanged.connect(self.update_temp)
+        self.model.temperatureChanged.connect(self.update_pump_button)
         self.model.pumpchanged.connect(self.update_pump_button)
         self.update_pump_button(self.model.pump_on())
+        self.model.popiolchanged.connect(self.update)
+
+
+    def reset_popiol(self):
+        self.model.reset_popiol()
+
 
     def open_mainscreen(self):
-        from main import RuryScreen  # import tutaj, żeby uniknąć cyklicznego importu
+        from main import RuryScreen  # brak cyklicznego ladowaania
         self.mainwindow = RuryScreen(self.model)
         self.mainwindow.show()
         self.hide()
@@ -144,21 +182,62 @@ class PiecScreen(QWidget):
         if  self.model.get_temperature() < 40:
             self.pump_btn.setStyleSheet("background-color: yellow; color: black;")
             self.pump_btn.setText("Za niska temperatura, zwieksz aby zalaczyc pompe")
+            return
 
         if  self.model.get_temperature() >= 90:
             self.pump_btn.setStyleSheet("background-color: pink; color: black;")
             self.pump_btn.setText("Temperatura za wysoka, bezpiecznik termiczny zadzialal")
+            return
 
+        if not self.model.pump_on():
+            self.pump_btn.setStyleSheet("background-color: lightgrey; color: black;")
+            self.pump_btn.setText("Możliwość załączenia pompy")
+            return
+
+        if self.model.pump_on():
+            self.pump_btn.setStyleSheet("background-color: green; color: white;")
+            self.pump_btn.setText("Pompa ON")
+            return
+
+    def open_rury_screen(self):
+        from SCREEN.screen2 import InstalacjaScreen
+        self.rury = InstalacjaScreen(self.model)
+        self.rury.show()
+        self.close()
 
 class HeatingModel(QObject):
     temperatureChanged = pyqtSignal(int)
     pumpchanged = pyqtSignal(bool)
+    popiolchanged = pyqtSignal(int)
 
     def __init__(self):
         super().__init__()
         self._temperature = 30
         self._pump = False
+        self.popiol = 0
+        self.popiol_timer = QTimer(self)
 
+        self.popiol_timer.timeout.connect(self.zwieksz_popiol)
+        self.popiol_timer.start(300)
+
+            #POPIÓŁ
+    def zwieksz_popiol(self):
+        if self.popiol == 100:
+            self.set_pump(False)
+
+        if self.popiol < 100:
+            self.popiol += 2
+            self.popiolchanged.emit(self.popiol)
+
+    def stan_popiol(self):
+        return self.popiol
+
+    def reset_popiol(self):
+        self.popiol = 0
+        self.popiolchanged.emit(self.popiol)
+
+
+            #TEMPERATURA
     def set_temperature(self, value):
         self._temperature = value
         self.temperatureChanged.emit(value)  # wysyła event
@@ -166,6 +245,8 @@ class HeatingModel(QObject):
     def get_temperature(self):
         return self._temperature
 
+
+            #POMPA
     def set_pump(self, state):
         self._pump = state
         self.pumpchanged.emit(state)
