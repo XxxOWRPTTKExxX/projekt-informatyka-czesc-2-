@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QPushButton
 from PyQt5.QtGui import QPainter, QPen, QColor, QPainterPath
-from PyQt5.QtCore import Qt, QPointF, QTimer
+from PyQt5.QtCore import Qt, QPointF, QTimer, pyqtSignal
 from SCREEN.screen1 import HeatingModel
 
 
@@ -38,6 +38,7 @@ class InstalacjaScreen(QWidget):
     def __init__(self, model):
         super().__init__()
         self.model = model
+
         self.setWindowTitle("Schemat instalacji CO")
         self.setMinimumSize(900, 600)
         self.zaw1_otwarty = self.model.zaw1_otwarty
@@ -52,6 +53,13 @@ class InstalacjaScreen(QWidget):
         self.goto_ekran1_btn.setGeometry(50, 350, 150, 50)
         self.goto_ekran1_btn.raise_()
         self.goto_ekran1_btn.clicked.connect(self.goto_ekran1)
+
+        self.goto_ekran0_btn = QPushButton("Ekran z informacjami", self)
+        self.goto_ekran0_btn.setStyleSheet("background-color: orange;")
+        self.goto_ekran0_btn.setGeometry(50, 450, 450, 50)
+        self.goto_ekran0_btn.raise_()
+        self.goto_ekran0_btn.clicked.connect(self.goto_ekran0)
+
 
 
                 #przyciski zaworow obiegu
@@ -351,4 +359,10 @@ class InstalacjaScreen(QWidget):
         from SCREEN.screen1 import PiecScreen
         self.ekran1 = PiecScreen(self.model)
         self.ekran1.show()
+        self.hide()
+
+    def goto_ekran0(self):
+        from main import RuryScreen
+        self.ekran0 = RuryScreen(self.model)
+        self.ekran0.show()
         self.hide()

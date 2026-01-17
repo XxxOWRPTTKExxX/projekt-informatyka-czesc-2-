@@ -28,6 +28,13 @@ class HeatingView(QWidget):
         width = 300
         height = 450
 
+        if 40 < temp < 60:
+            painter.setBrush(Qt.darkRed)
+        elif temp >=60:
+            painter.setBrush(Qt.red)
+        elif temp < 40:
+            painter.setBrush(Qt.lightGray)
+
         # główny prostokąt
         painter.drawRect(x, y, width, height)
 
@@ -100,10 +107,10 @@ class PiecScreen(QWidget):
             #slider do temperaturki
 
         self.temp_label = QLabel(f"Temp: {self.model.get_temperature()}°C")
-        slider = QSlider(Qt.Horizontal)
-        slider.setRange(20, 100)
-        slider.setValue(self.model.get_temperature())
-        slider.valueChanged.connect(self.model.set_temperature)
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setRange(20, 100)
+        self.slider.setValue(self.model.get_temperature())
+        self.slider.valueChanged.connect(self.model.set_temperature)
 
             #przycisk do aktywacji pompy grzewczej
         self.pump_btn = QPushButton("Pompa ON/OFF")
@@ -120,11 +127,17 @@ class PiecScreen(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.view)
         layout.addWidget(self.temp_label)
-        layout.addWidget(slider)
+        layout.addWidget(self.slider)
         layout.addWidget(self.pump_btn)
         layout.addWidget(self.goto_ekrangl_btn)
         layout.addWidget(self.goto_rury_btn)
         self.setLayout(layout)
+
+        # przycisk do aktywacji auto grzania
+        self.auto_btn = QPushButton("Auto grzanie", self)
+        self.auto_btn.setGeometry(145, 405, 250, 70)
+        self.auto_btn.raise_()
+        self.auto_btn.clicked.connect(self.tryb_auto_grzanie)
 
                 # przycisk do popiolu
         self.popiol_btn = QPushButton("Oproznij popiol", self)
@@ -139,6 +152,9 @@ class PiecScreen(QWidget):
         self.model.popiolchanged.connect(self.update)
 
 
+    def tryb_auto_grzanie(self):
+        self.model.auto_grzanie()
+
     def reset_popiol(self):
         self.model.reset_popiol()
 
@@ -151,6 +167,7 @@ class PiecScreen(QWidget):
 
     def update_temp(self, value):
         self.temp_label.setText(f"Temp: {value}°C")
+        self.slider.setValue(value)
         if value >= 90:
             if self.model.pompa_on():
                 self.model.set_pump(False)  # wymuszone wyłączenie
@@ -207,6 +224,15 @@ class PiecScreen(QWidget):
         self.rury.show()
         self.close()
 
+    def tryb_auto_grzanie(self):
+        if not self.model.czyauto_grzanie:
+            self.model.auto_grzanie()
+            self.auto_btn.setText("Stop automatyczne grzanie")
+        else:
+            self.model.stop_auto_grzanie()
+            self.auto_btn.setText("Automatyczne grzanie")
+
+
 class HeatingModel(QObject):
     temperatureChanged = pyqtSignal(int)
     pumpchanged = pyqtSignal(bool)
@@ -226,6 +252,14 @@ class HeatingModel(QObject):
         self.bojler_fill = 0
         self.spust_otwarty = True
         self.przepust = 0
+        self.czyauto_grzanie = False
+        self.przegrzanie = False
+
+                #Timery do automatycznego grzania do symul
+        self.temp_timer = QTimer(self)
+        self.temp_timer.timeout.connect(self.auto_grzanie_sym1)
+        self.cool_timer = QTimer(self)
+        self.cool_timer.timeout.connect(self.auto_grzanie_sym2)
 
             #POPIÓŁ
     def zwieksz_popiol(self):
@@ -252,6 +286,35 @@ class HeatingModel(QObject):
     def get_temperature(self):
         return self._temperature
 
+    def auto_grzanie(self):
+        if not self.czyauto_grzanie:
+            self.czyauto_grzanie = True
+            self.temp_timer.start(300)
+            self.cool_timer.start(4000)
+
+    def stop_auto_grzanie(self):
+        self.czyauto_grzanie = False
+        self.temp_timer.stop()
+        self.cool_timer.stop()
+
+    def auto_grzanie_sym1(self): #dodawanie
+        if not self.przegrzanie:
+            if self._temperature < 100:
+                self._temperature +=1
+            if self._temperature >= 100:
+                self._temperature = 100
+                self.przegrzanie = True
+                self.spust_otwarty = False
+
+        self.temperatureChanged.emit(self._temperature)
+
+    def auto_grzanie_sym2(self): #odejmowanie
+        self._temperature -=3
+        if self._temperature <= 30:
+            self._temperature = 30
+            self.przegrzanie = False
+            self.spust_otwarty = True
+        self.temperatureChanged.emit(self._temperature)
 
             #POMPA
     def set_pump(self, state):
