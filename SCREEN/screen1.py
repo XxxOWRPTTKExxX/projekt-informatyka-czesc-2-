@@ -69,7 +69,10 @@ class HeatingView(QWidget):
 
         popiol_procent = self.model.stan_popiol()
 
-        if popiol_procent > 80:
+
+        if popiol_procent == 100:
+            color = Qt.magenta
+        elif popiol_procent >80:
             import time
             if int(time.time()*2)%2 ==0:
                 color = Qt.red
@@ -78,7 +81,6 @@ class HeatingView(QWidget):
         else:
             color = Qt.gray
 
-        #if popiol_procent = 100:
 
         painter.setBrush(color)
         painter.setPen(Qt.black)
@@ -133,7 +135,7 @@ class PiecScreen(QWidget):
         self.model.temperatureChanged.connect(self.update_temp)
         self.model.temperatureChanged.connect(self.update_pump_button)
         self.model.pumpchanged.connect(self.update_pump_button)
-        self.update_pump_button(self.model.pump_on())
+        self.update_pump_button(self.model.pompa_on())
         self.model.popiolchanged.connect(self.update)
 
 
@@ -150,23 +152,23 @@ class PiecScreen(QWidget):
     def update_temp(self, value):
         self.temp_label.setText(f"Temp: {value}°C")
         if value >= 90:
-            if self.model.pump_on():
+            if self.model.pompa_on():
                 self.model.set_pump(False)  # wymuszone wyłączenie
             self.update_pump_button(False)
         if value <= 30:
-            if self.model.pump_on():
+            if self.model.pompa_on():
                 self.model.set_pump(False)  # wymuszone wyłączenie
             self.update_pump_button(False)
 
 
     def switch_pump(self):
-        if not self.model.pump_on() and self.model.get_temperature() < 40:
-            self.update_pump_button(self.model.pump_on())
+        if not self.model.pompa_on() and self.model.get_temperature() < 40:
+            self.update_pump_button(self.model.pompa_on())
             return
-        self.model.set_pump(not self.model.pump_on())
+        self.model.set_pump(not self.model.pompa_on())
 
         if self.model.get_temperature() > 90:
-            self.update_pump_button(self.model.pump_on())
+            self.update_pump_button(self.model.pompa_on())
             return
 
 
@@ -189,12 +191,12 @@ class PiecScreen(QWidget):
             self.pump_btn.setText("Temperatura za wysoka, bezpiecznik termiczny zadzialal")
             return
 
-        if not self.model.pump_on():
+        if not self.model.pompa_on():
             self.pump_btn.setStyleSheet("background-color: lightgrey; color: black;")
             self.pump_btn.setText("Możliwość załączenia pompy")
             return
 
-        if self.model.pump_on():
+        if self.model.pompa_on():
             self.pump_btn.setStyleSheet("background-color: green; color: white;")
             self.pump_btn.setText("Pompa ON")
             return
@@ -216,9 +218,14 @@ class HeatingModel(QObject):
         self._pump = False
         self.popiol = 0
         self.popiol_timer = QTimer(self)
-
         self.popiol_timer.timeout.connect(self.zwieksz_popiol)
-        self.popiol_timer.start(300)
+        self.popiol_timer.start(700)
+        self.zaw1_otwarty = False
+        self.zaw2_otwarty = False
+        self.zaw3_otwarty = False
+        self.bojler_fill = 0
+        self.spust_otwarty = True
+        self.przepust = 0
 
             #POPIÓŁ
     def zwieksz_popiol(self):
@@ -226,7 +233,7 @@ class HeatingModel(QObject):
             self.set_pump(False)
 
         if self.popiol < 100:
-            self.popiol += 2
+            self.popiol += 1
             self.popiolchanged.emit(self.popiol)
 
     def stan_popiol(self):
@@ -251,7 +258,7 @@ class HeatingModel(QObject):
         self._pump = state
         self.pumpchanged.emit(state)
 
-    def pump_on(self):
+    def pompa_on(self):
         return self._pump
 
 

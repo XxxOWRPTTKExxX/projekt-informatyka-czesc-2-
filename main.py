@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QPushButton, QSlider, QSizePolicy
 from PyQt5.QtGui import QPainter, QPen, QColor
-from PyQt5.QtCore import Qt, QObject, pyqtSignal
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, QPointF
 from SCREEN.screen1 import HeatingModel
 from SCREEN.screen2 import InstalacjaScreen
 import sys
@@ -26,7 +26,7 @@ class RuryScreen(QWidget):
 
 
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Rurociągi"))
+        layout.addWidget(QLabel("Rurociągi:"))
         layout.addWidget(self.status)
         layout.addWidget(self.temp_label)
         layout.addWidget(self.goto_piec_btn)
@@ -42,15 +42,17 @@ class RuryScreen(QWidget):
 
     def update_flow(self, *_):
         temp = self.model.get_temperature()
-        pump = self.model.pump_on()
+        pompa = self.model.pompa_on()
 
-        if pump:
-            self.status.setText(f"Przepływ – {temp}°C")
+
+        if self.model.przepust !=0:
+            self.status.setText(f"Przepływ – {self.model.przepust}%")
         else:
             self.status.setText("Brak przepływu")
 
         self.temp_label.setText(f"Temperatura: {temp}°C")
         self.update()
+
 
     def open_piec_screen(self):
         from SCREEN.screen1 import PiecScreen  # import tutaj, żeby uniknąć cyklicznego importu
@@ -59,7 +61,7 @@ class RuryScreen(QWidget):
         self.hide()
 
     def toggle_pump(self):
-        self.model.set_pump(not self.model.pump_on())
+        self.model.set_pump(not self.model.pompa_on())
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -85,11 +87,51 @@ class RuryScreen(QWidget):
 
 
 
+                        #ZAWORY DO SPRAWDZANIA STANU
+
+        #self.draw_valve(painter, 50, 100, text="Dolewanie", open=True)
+        self.draw_valve(painter, 150, 100, text="Spust", open=self.model.spust_otwarty)
+        self.draw_valve(painter, 300, 100, text="Obieg 1", open=self.model.zaw1_otwarty)
+        self.draw_valve(painter, 450, 100, text="Obieg 2", open=self.model.zaw2_otwarty)
+        self.draw_valve(painter, 600, 100, text="Obieg 3", open=self.model.zaw3_otwarty)
+
+    def draw_valve(self, painter, x, y, text="", open=True):
+        size = 19
+
+        if open:
+            color = QColor(0, 160, 0)  # zielony = otwarty
+        else:
+            color = QColor(180, 0, 0)  # czerwony = zamknięty
+
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(color)
+
+        # lewy trójkąt ▶
+        left_triangle = [
+            QPointF(x, y - size),
+            QPointF(x, y + size),
+            QPointF(x + size, y)
+        ]
+
+        # prawy trójkąt ◀
+        right_triangle = [
+            QPointF(x + size, y),
+            QPointF(x + 2 * size, y - size),
+            QPointF(x + 2 * size, y + size)
+        ]
+
+        painter.drawPolygon(left_triangle)
+        painter.drawPolygon(right_triangle)
+
+        painter.setPen(Qt.black)
+        if text:
+            painter.drawText(x - 10, y + 35, text)
+
+
 # ------------------------- URUCHOMIENIE -------------------------
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     model = HeatingModel()
     window = RuryScreen(model)
-    window = InstalacjaScreen(model)
     window.show()
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
