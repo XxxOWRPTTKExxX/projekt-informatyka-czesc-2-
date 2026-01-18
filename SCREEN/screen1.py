@@ -1,11 +1,11 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QSlider
 from PyQt5.QtGui import QPainter, QPen
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QTimer
 import sys
 
 
 
-class HeatingView(QWidget):
+class Wyglad_piec(QWidget):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -22,11 +22,7 @@ class HeatingView(QWidget):
 
         temp = self.model.get_temperature()
 
-        # ===== WYMIARY PIEC =====
-        x = 100
-        y = 100
-        width = 300
-        height = 450
+                    # ===== RYSOWANIE PIEC =====
 
         if 40 < temp < 60:
             painter.setBrush(Qt.darkRed)
@@ -36,29 +32,27 @@ class HeatingView(QWidget):
             painter.setBrush(Qt.lightGray)
 
         # główny prostokąt
-        painter.drawRect(x, y, width, height)
+        painter.drawRect(100, 100, 300, 450)
 
         # podziały pieca
-        painter.drawLine(x, y + 200, x + width, y + 200)
-        painter.drawLine(x, y + 380, x + width, y + 380)
+        painter.drawLine(100, 300, 400, 300)
+        painter.drawLine(100, 480, 400, 480)
 
         # podstawa
-        painter.drawRect(x, y + height, width, 0)
+        painter.drawRect(100, 550, 300, 0)
 
-        # ===== TERMOMETR =====
-        tx = 650
-        ty = 60
+                    # ===== TERMOMETR =====
 
         # rurka termometru
-        painter.drawLine(tx, ty, tx, ty+270 + 200)
+        painter.drawLine(650, 60, 650, 330 + 200)
 
         # zaokraglenie u gory
-        painter.drawArc(tx - 15, ty - 10, 30, 30, 0 * 16, 180 * 16)
+        painter.drawArc(635, 50, 30, 30, 0, 180 * 16)
 
         # zaokraglenie na dole
-        painter.drawArc(tx - 25, ty + 450, 50, 50, 55 * 16, -290 * 16)
-        painter.drawLine(tx-15, ty+5 , tx-15, ty + 455)
-        painter.drawLine(tx + 15, ty + 5, tx + 15, ty + 455)
+        painter.drawArc(625, 510, 50, 50, 55 * 16, -290 * 16)
+        painter.drawLine(635, 65 , 635, 515)
+        painter.drawLine(665, 65, 665, 515)
 
         #kolor temp
         if temp < 40:
@@ -72,7 +66,7 @@ class HeatingView(QWidget):
         thermo_height = 465
         filled_height = int((temp - min_temp) / (max_temp - min_temp) * thermo_height)
         painter.drawEllipse(625,510,50,50)
-        painter.drawRect(tx - 10,ty + 460 - filled_height,20,filled_height-10)
+        painter.drawRect(640,520 - filled_height,20,filled_height-10)
 
         popiol_procent = self.model.stan_popiol()
 
@@ -101,8 +95,7 @@ class PiecScreen(QWidget):
         super().__init__()
         self.model = model
         self.setWindowTitle("Piec")
-
-        self.view = HeatingView(model)
+        self.view = Wyglad_piec(model)
 
             #slider do temperaturki
 
@@ -117,10 +110,11 @@ class PiecScreen(QWidget):
         self.pump_btn.clicked.connect(self.switch_pump)
 
 
-
+            #przycisk przejscia do ekranu z informacjami
         self.goto_ekrangl_btn = QPushButton("Przejdź do ekranu glownego")
         self.goto_ekrangl_btn.clicked.connect(self.open_mainscreen)
 
+            #przycisk przejscai do ekranu z wygladem instalacji
         self.goto_rury_btn = QPushButton("Przejdź do instalacji")
         self.goto_rury_btn.clicked.connect(self.open_rury_screen)
 
@@ -157,13 +151,6 @@ class PiecScreen(QWidget):
 
     def reset_popiol(self):
         self.model.reset_popiol()
-
-
-    def open_mainscreen(self):
-        from main import RuryScreen  # brak cyklicznego ladowaania
-        self.mainwindow = RuryScreen(self.model)
-        self.mainwindow.show()
-        self.hide()
 
     def update_temp(self, value):
         self.temp_label.setText(f"Temp: {value}°C")
@@ -218,11 +205,7 @@ class PiecScreen(QWidget):
             self.pump_btn.setText("Pompa ON")
             return
 
-    def open_rury_screen(self):
-        from SCREEN.screen2 import InstalacjaScreen
-        self.rury = InstalacjaScreen(self.model)
-        self.rury.show()
-        self.close()
+
 
     def tryb_auto_grzanie(self):
         if not self.model.czyauto_grzanie:
@@ -231,6 +214,18 @@ class PiecScreen(QWidget):
         else:
             self.model.stop_auto_grzanie()
             self.auto_btn.setText("Automatyczne grzanie")
+
+    def open_mainscreen(self):
+        from main import Infoekran  # brak cyklicznego ladowaania
+        self.infoekran = Infoekran(self.model)
+        self.infoekran.show()
+        self.hide()
+
+    def open_rury_screen(self):
+        from SCREEN.screen2 import InstalacjaScreen
+        self.rury = InstalacjaScreen(self.model)
+        self.rury.show()
+        self.close()
 
 
 class HeatingModel(QObject):

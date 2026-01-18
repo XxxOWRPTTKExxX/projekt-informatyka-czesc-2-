@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QPushButton
 from PyQt5.QtGui import QPainter, QPen, QColor, QPainterPath
-from PyQt5.QtCore import Qt, QPointF, QTimer, pyqtSignal
-from SCREEN.screen1 import HeatingModel
+from PyQt5.QtCore import Qt, QPointF, QTimer
+
 
 
 class Rura:
@@ -202,9 +202,9 @@ class InstalacjaScreen(QWidget):
 
 
         # ================= OBIEGI =================
-        self.draw_circuit(painter, 550, y - 100, "              Obieg 1")
-        self.draw_circuit(painter, 550, y,       "              Obieg 2")
-        self.draw_circuit(painter, 550, y + 100, "              Obieg 3")
+        self.draw_tekst(painter, 550, y - 100, "              Obieg 1")
+        self.draw_tekst(painter, 550, y,       "              Obieg 2")
+        self.draw_tekst(painter, 550, y + 100, "              Obieg 3")
 
         # krótkie rurki po zaworach obiegów
         Rura([(710, y - 100), (630, y - 100)], plynie=self.zaw1_otwarty).draw(painter)
@@ -221,12 +221,11 @@ class InstalacjaScreen(QWidget):
 
 
     def draw_bojler(self, painter, x, y):
-        width = 60
         height = 160
 
         painter.setBrush(Qt.gray)
         painter.setPen(Qt.black)
-        painter.drawRect(x, y, width, height)
+        painter.drawRect(x, y, 60, 160)
 
         # wypełnienie bojlera
         fill_height = int(height * self.bojler_fill / 100)
@@ -234,7 +233,7 @@ class InstalacjaScreen(QWidget):
         painter.drawRect(
             x,
             y + height - fill_height,
-            width,
+            60,
             fill_height
         )
 
@@ -265,10 +264,12 @@ class InstalacjaScreen(QWidget):
             if self.bojler_fill <100:
                 self.bojler_fill +=0.08
                 self.model.bojler_fill = self.bojler_fill
+
         elif not self.model.pompa_on() and self.bojler_fill >0 and self.spust_otwarty==True:
             if self.zaw1_otwarty==True or self.zaw2_otwarty==True or self.zaw3_otwarty==True :
                 self.bojler_fill -= wartosc
                 self.model.bojler_fill = self.bojler_fill
+
 
         if not self.spust_otwarty:
             wartosc_spust=2
@@ -278,7 +279,7 @@ class InstalacjaScreen(QWidget):
             self.model.bojler_fill = self.bojler_fill
         self.update()
 
-    def draw_circuit(self, painter, x, y, name):
+    def draw_tekst(self, painter, x, y, name):
         painter.drawText(x + 110, y + 5, name)
 
     def draw_valve(self, painter, x, y, text="", open=True):
@@ -336,6 +337,7 @@ class InstalacjaScreen(QWidget):
         else:
             color = QColor(180, 0, 0)  # czerwony = zamknięty
         self.aktuprzeplyw()
+        self.update_bojler()
 
     def aktuprzeplyw(self):
         if not self.spust_otwarty:
@@ -362,7 +364,7 @@ class InstalacjaScreen(QWidget):
         self.hide()
 
     def goto_ekran0(self):
-        from main import RuryScreen
-        self.ekran0 = RuryScreen(self.model)
-        self.ekran0.show()
+        from main import Infoekran
+        self.ekranstart = Infoekran(self.model)
+        self.ekranstart.show()
         self.hide()
