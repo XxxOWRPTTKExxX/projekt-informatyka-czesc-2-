@@ -5,7 +5,7 @@ from SCREEN.screen1 import HeatingModel
 from SCREEN.screen2 import InstalacjaScreen
 import sys
 
-# ------------------------- OKNO RUR -------------------------
+
 class Infoekran(QWidget):
     def __init__(self, model):
         super().__init__()
@@ -172,7 +172,7 @@ class Infoekran(QWidget):
         self.hide()
 
 
-# ------------------------- URUCHOMIENIE -------------------------
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     model = HeatingModel()
